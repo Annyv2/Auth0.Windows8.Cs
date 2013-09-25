@@ -51,18 +51,18 @@ namespace Auth0.SDK
         /// <remarks>When using openid profile if the user has many attributes the token might get big and the embedded browser (Internet Explorer) won't be able to parse a large URL</remarks>
         /// </param>
         /// <returns>Returns a Task of Auth0User</returns>
-        public Task<Auth0User> LoginAsync(UIElement owner, string connection = "")
+        public async Task<Auth0User> LoginAsync(UIElement owner, string connection = "")
         {
             var tcs = new TaskCompletionSource<Auth0User>();
-            var auth = this.GetAuthenticator(connection);
+            var auth = await this.GetAuthenticatorAsync(connection);
 
-            if (auth.Result.ResponseStatus == WebAuthenticationStatus.Success)
+            if (auth.ResponseStatus == WebAuthenticationStatus.Success)
             {
-                this.SetupCurrentUser(parseResult(auth.Result.ResponseData));
+                this.SetupCurrentUser(parseResult(auth.ResponseData));
                 tcs.TrySetResult(this.CurrentUser);
             }
 
-            return tcs.Task;
+            return this.CurrentUser;
         }
 
         /// <summary>
@@ -130,7 +130,7 @@ namespace Auth0.SDK
             this.CurrentUser = new Auth0User(accountProperties);
         }
 
-        private Task<WebAuthenticationResult> GetAuthenticator(string connection)
+        private async Task<WebAuthenticationResult> GetAuthenticatorAsync(string connection)
         {
             // Generate state to include in startUri
             var chars = new char[16];
@@ -149,7 +149,7 @@ namespace Auth0.SDK
             var startUri = new Uri(authorizeUri + "&state=" + state);
             var endUri = new Uri(redirectUri);
 
-            return WebAuthenticationBroker.AuthenticateAsync(WebAuthenticationOptions.None, startUri, endUri).AsTask<WebAuthenticationResult>();
+            return await WebAuthenticationBroker.AuthenticateAsync(WebAuthenticationOptions.None, startUri, endUri).AsTask<WebAuthenticationResult>();
         }
 
         private static Dictionary<string, string> parseResult(string result)
