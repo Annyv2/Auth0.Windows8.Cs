@@ -42,7 +42,7 @@ auth0.LoginAsync(this, "auth0waadtests.onmicrosoft.com").ContinueWith(t => .. );
 Or with specific user name and password (only for providers that support this)
 
 ~~~cs
-auth0.LoginAsync(this, "my-db-connection", "username", "password").ContinueWith(t => .. );
+auth0.LoginAsync("my-db-connection", "username", "password").ContinueWith(t => .. );
 ~~~
 
 ---
