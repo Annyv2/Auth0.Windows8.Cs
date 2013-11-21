@@ -22,11 +22,11 @@
   ~~~cs
   auth0.LoginAsync(this).ContinueWith(t =>
   {
-  /* Use t.Result to do wonderful things, e.g.: 
-    - get user email => t.Result.Profile["email"].ToString()
-    - get facebook/google/twitter/etc access token => t.Result.Profile["identities"][0]["access_token"]
-    - get Windows Azure AD groups => t.Result.Profile["groups"]
-    - etc.    
+    /* Use t.Result to do wonderful things, e.g.: 
+      - get user email => t.Result.Profile["email"].ToString()
+      - get facebook/google/twitter/etc access token => t.Result.Profile["identities"][0]["access_token"]
+      - get Windows Azure AD groups => t.Result.Profile["groups"]
+      - etc. */  
   },
   TaskScheduler.FromCurrentSynchronizationContext());
   ~~~
