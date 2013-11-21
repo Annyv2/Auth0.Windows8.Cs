@@ -10,7 +10,7 @@
 
   ~~~cs
   var auth0 = new Auth0Client(
-     "youraccount.auth0.com",
+     "Your Tenant",
      "Your Client ID",
      "Your Client Secret");
   ~~~
