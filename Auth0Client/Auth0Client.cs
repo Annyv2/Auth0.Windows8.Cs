@@ -16,6 +16,7 @@ namespace Auth0.SDK
         private const string AuthorizeUrl = "https://{0}/authorize?client_id={1}&redirect_uri={2}&response_type=token&connection={3}&scope={4}";
         private const string LoginWidgetUrl = "https://{0}/login/?client={1}&redirect_uri={2}&response_type=token&scope={3}";
         private const string ResourceOwnerEndpoint = "https://{0}/oauth/ro";
+        private const string UserInfoEndpoint = "https://{0}/userinfo?access_token={1}";
         private const string DefaultCallback = "https://{0}/mobile";
 
         private readonly string auth0Namespace;
@@ -127,7 +128,27 @@ namespace Auth0.SDK
 
         private void SetupCurrentUser(IDictionary<string, string> accountProperties)
         {
-            this.CurrentUser = new Auth0User(accountProperties);
+            var endpoint = string.Format(UserInfoEndpoint, this.auth0Namespace, accountProperties["access_token"]);
+            var request = new HttpClient();
+
+            request.GetAsync(new Uri(endpoint)).ContinueWith(t =>
+            {
+                try
+                {
+                    t.Result.EnsureSuccessStatusCode();
+                    var profileString = t.Result.Content.ReadAsStringAsync().Result;
+                    accountProperties.Add("profile", profileString);
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+                finally
+                {
+                    this.CurrentUser = new Auth0User(accountProperties);
+                }
+            })
+            .Wait();
         }
 
         private async Task<WebAuthenticationResult> GetAuthenticatorAsync(string connection, string scope)
@@ -159,7 +180,7 @@ namespace Auth0.SDK
         {
             var tokens = new Dictionary<string, string>();
 
-            // result will be: https://callback#id_token=1234&access_token=12345&...
+            // Result will be: https://callback#id_token=1234&access_token=12345&...
             var strTokens = result.Split('#')[1].Split('&');
 
             foreach (var t in strTokens)

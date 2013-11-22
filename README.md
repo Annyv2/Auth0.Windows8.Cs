@@ -20,7 +20,7 @@
 3. Trigger login (with Widget) 
 
   ~~~cs
-  auth0.LoginAsync(this).ContinueWith(t =>
+  auth0.LoginAsync().ContinueWith(t =>
   {
     /* Use t.Result to do wonderful things, e.g.: 
       - get user email => t.Result.Profile["email"].ToString()
@@ -36,7 +36,7 @@
 Or you can use the connection as a parameter (e.g. here we login with a Windows Azure AD account)
 
 ~~~cs
-auth0.LoginAsync(this, "auth0waadtests.onmicrosoft.com").ContinueWith(t => .. );
+auth0.LoginAsync("auth0waadtests.onmicrosoft.com").ContinueWith(t => .. );
 ~~~
 
 Or with specific user name and password (only for providers that support this)
@@ -44,6 +44,13 @@ Or with specific user name and password (only for providers that support this)
 ~~~cs
 auth0.LoginAsync("my-db-connection", "username", "password").ContinueWith(t => .. );
 ~~~
+
+### Scope
+
+Optionally you can specify the `scope` parameter. There are two possible values for scope today:
+
+* __scope: "openid"__ _(default)_ - It will return, not only the `access_token`, but also an `id_token` which is a Json Web Token (JWT). The JWT will only contain the user id.
+* __scope: "openid profile"__ - If you want the entire user profile to be part of the `id_token`.
 
 ---
 
