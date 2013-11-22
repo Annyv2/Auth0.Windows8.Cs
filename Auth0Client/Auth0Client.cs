@@ -1,23 +1,20 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using Windows.Security.Authentication.Web;
-using System.Net.Http;
-using Windows.Foundation;
-using Windows.UI.Xaml;
-
 namespace Auth0.SDK
 {
+    using Newtonsoft.Json.Linq;
+    using System;
+    using System.Collections.Generic;
+    using System.Net;
+    using System.Net.Http;
+    using System.Threading.Tasks;
+    using Windows.Security.Authentication.Web;
+
     /// <summary>
     /// A simple client to Authenticate Users with Auth0.
     /// </summary>
     public partial class Auth0Client
     {
-        private const string AuthorizeUrl = "https://{0}/authorize?client_id={1}&scope=openid%20profile&redirect_uri={2}&response_type=token&connection={3}";
-        private const string LoginWidgetUrl = "https://{0}/login/?client={1}&scope=openid%20profile&redirect_uri={2}&response_type=token";
+        private const string AuthorizeUrl = "https://{0}/authorize?client_id={1}&redirect_uri={2}&response_type=token&connection={3}&scope={4}";
+        private const string LoginWidgetUrl = "https://{0}/login/?client={1}&redirect_uri={2}&response_type=token&scope={3}";
         private const string ResourceOwnerEndpoint = "https://{0}/oauth/ro";
         private const string DefaultCallback = "https://{0}/mobile";
 
@@ -43,18 +40,17 @@ namespace Auth0.SDK
         }
 
         /// <summary>
-        /// Login a user into an Auth0 application by showing an embedded browser window either showing the widget or skipping it by passing a connection name
+        /// Login a user into an Auth0 application by showing an embedded browser window either showing the widget or skipping it by passing a connection name.
         /// </summary>
-        /// <param name="owner">The owner window</param>
-        /// <param name="connection">Optional connection name to bypass the login widget</param>
+        /// <param name="connection">Optional. Connection name to bypass the login widget</param>
         /// <param name="scope">Optional. Scope indicating what attributes are needed. "openid" to just get the user_id or "openid profile" to get back everything.
         /// <remarks>When using openid profile if the user has many attributes the token might get big and the embedded browser (Internet Explorer) won't be able to parse a large URL</remarks>
         /// </param>
         /// <returns>Returns a Task of Auth0User</returns>
-        public async Task<Auth0User> LoginAsync(UIElement owner, string connection = "")
+        public async Task<Auth0User> LoginAsync(string connection = "", string scope = "openid")
         {
             var tcs = new TaskCompletionSource<Auth0User>();
-            var auth = await this.GetAuthenticatorAsync(connection);
+            var auth = await this.GetAuthenticatorAsync(connection, scope);
 
             if (auth.ResponseStatus == WebAuthenticationStatus.Success)
             {
@@ -69,10 +65,14 @@ namespace Auth0.SDK
         ///  Log a user into an Auth0 application given an user name and password.
         /// </summary>
         /// <returns>Task that will complete when the user has finished authentication.</returns>
-        /// <param name="connection" type="string">The name of the connection to use in Auth0. Connection defines an Identity Provider.</param>
-        /// <param name="userName" type="string">User name.</param>
-        /// <param name="password type="string"">User password.</param>
-        public Task<Auth0User> LoginAsync(string connection, string userName, string password)
+        /// <param name="connection">The name of the connection to use in Auth0. Connection defines an Identity Provider.</param>
+        /// <param name="userName">User name.</param>
+        /// <param name="password">User password.</param>
+        /// <param name="scope">Optional. Scope indicating what attributes are needed. "openid" to just get the user_id or "openid profile" to get back everything.
+        /// <remarks>When using openid profile if the user has many attributes the token might get big and the embedded browser (Internet Explorer) won't be able to parse a large URL</remarks>
+        /// </param>
+        /// <returns>Returns a Task of Auth0User</returns>
+        public Task<Auth0User> LoginAsync(string connection, string userName, string password, string scope = "openid")
         {
             var endpoint = string.Format(ResourceOwnerEndpoint, this.auth0Namespace);
             var parameters = new Dictionary<string, string> 
@@ -83,7 +83,7 @@ namespace Auth0.SDK
 				{ "username", userName },
 				{ "password", password },
 				{ "grant_type", "password" },
-				{ "scope", "openid profile" }
+				{ "scope", scope }
 			};
 
             var request = new HttpClient();
@@ -130,7 +130,7 @@ namespace Auth0.SDK
             this.CurrentUser = new Auth0User(accountProperties);
         }
 
-        private async Task<WebAuthenticationResult> GetAuthenticatorAsync(string connection)
+        private async Task<WebAuthenticationResult> GetAuthenticatorAsync(string connection, string scope)
         {
             // Generate state to include in startUri
             var chars = new char[16];
@@ -140,10 +140,13 @@ namespace Auth0.SDK
                 chars[i] = (char)rand.Next((int)'a', (int)'z' + 1);
             }
 
+            // Encode scope value
+            scope = WebUtility.UrlEncode(scope);
+
             var redirectUri = this.CallbackUrl;
             var authorizeUri = !string.IsNullOrWhiteSpace(connection) ?
-                string.Format(AuthorizeUrl, this.auth0Namespace, this.clientId, Uri.EscapeDataString(redirectUri), connection) :
-                string.Format(LoginWidgetUrl, this.auth0Namespace, this.clientId, Uri.EscapeDataString(redirectUri));
+                string.Format(AuthorizeUrl, this.auth0Namespace, this.clientId, Uri.EscapeDataString(redirectUri), connection, scope) :
+                string.Format(LoginWidgetUrl, this.auth0Namespace, this.clientId, Uri.EscapeDataString(redirectUri), scope);
 
             var state = new string(chars);
             var startUri = new Uri(authorizeUri + "&state=" + state);
@@ -154,9 +157,9 @@ namespace Auth0.SDK
 
         private static Dictionary<string, string> parseResult(string result)
         {
-            Dictionary<string, string> tokens = new Dictionary<string, string>();
+            var tokens = new Dictionary<string, string>();
 
-            //result will be: https://callback#id_token=1234&access_token=12345&...
+            // result will be: https://callback#id_token=1234&access_token=12345&...
             var strTokens = result.Split('#')[1].Split('&');
 
             foreach (var t in strTokens)
