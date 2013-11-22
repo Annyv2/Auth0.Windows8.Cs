@@ -10,9 +10,9 @@
 
   ~~~cs
   var auth0 = new Auth0Client(
-     "Your Tenant",
-     "Your Client ID",
-     "Your Client Secret");
+     "Your_Auth0_Namespace", // e.g.: "mytenant.auth0.com"
+	 "Your_Client_ID",
+	 "Your_Client_Secret");
   ~~~
   
   > Note: it is recommended to store the secret safely using DPAPI or something similar

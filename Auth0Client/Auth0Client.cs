@@ -16,18 +16,18 @@ namespace Auth0.SDK
     /// </summary>
     public partial class Auth0Client
     {
-        private const string AuthorizeUrl = "https://{0}.auth0.com/authorize?client_id={1}&scope=openid%20profile&redirect_uri={2}&response_type=token&connection={3}";
-        private const string LoginWidgetUrl = "https://{0}.auth0.com/login/?client={1}&scope=openid%20profile&redirect_uri={2}&response_type=token";
-        private const string ResourceOwnerEndpoint = "https://{0}.auth0.com/oauth/ro";
-        private const string DefaultCallback = "https://{0}.auth0.com/mobile";
+        private const string AuthorizeUrl = "https://{0}/authorize?client_id={1}&scope=openid%20profile&redirect_uri={2}&response_type=token&connection={3}";
+        private const string LoginWidgetUrl = "https://{0}/login/?client={1}&scope=openid%20profile&redirect_uri={2}&response_type=token";
+        private const string ResourceOwnerEndpoint = "https://{0}/oauth/ro";
+        private const string DefaultCallback = "https://{0}/mobile";
 
-        private readonly string subDomain;
+        private readonly string auth0Namespace;
         private readonly string clientId;
         private readonly string clientSecret;
 
-        public Auth0Client(string subDomain, string clientId, string clientSecret)
+        public Auth0Client(string auth0Namespace, string clientId, string clientSecret)
         {
-            this.subDomain = subDomain;
+            this.auth0Namespace = auth0Namespace;
             this.clientId = clientId;
             this.clientSecret = clientSecret;
         }
@@ -38,7 +38,7 @@ namespace Auth0.SDK
         {
             get
             {
-                return string.Format(DefaultCallback, this.subDomain);
+                return string.Format(DefaultCallback, this.auth0Namespace);
             }
         }
 
@@ -74,7 +74,7 @@ namespace Auth0.SDK
         /// <param name="password type="string"">User password.</param>
         public Task<Auth0User> LoginAsync(string connection, string userName, string password)
         {
-            var endpoint = string.Format(ResourceOwnerEndpoint, this.subDomain);
+            var endpoint = string.Format(ResourceOwnerEndpoint, this.auth0Namespace);
             var parameters = new Dictionary<string, string> 
 			{
 				{ "client_id", this.clientId },
@@ -142,8 +142,8 @@ namespace Auth0.SDK
 
             var redirectUri = this.CallbackUrl;
             var authorizeUri = !string.IsNullOrWhiteSpace(connection) ?
-                string.Format(AuthorizeUrl, subDomain, clientId, Uri.EscapeDataString(redirectUri), connection) :
-                string.Format(LoginWidgetUrl, subDomain, clientId, Uri.EscapeDataString(redirectUri));
+                string.Format(AuthorizeUrl, this.auth0Namespace, this.clientId, Uri.EscapeDataString(redirectUri), connection) :
+                string.Format(LoginWidgetUrl, this.auth0Namespace, this.clientId, Uri.EscapeDataString(redirectUri));
 
             var state = new string(chars);
             var startUri = new Uri(authorizeUri + "&state=" + state);
