@@ -11,11 +11,8 @@
   ~~~cs
   var auth0 = new Auth0Client(
      "Your_Auth0_Namespace", // e.g.: "mytenant.auth0.com"
-	 "Your_Client_ID",
-	 "Your_Client_Secret");
+	 "Your_Client_ID");
   ~~~
-  
-  > Note: it is recommended to store the secret safely using DPAPI or something similar
 
 3. Trigger login (with Widget) 
 
