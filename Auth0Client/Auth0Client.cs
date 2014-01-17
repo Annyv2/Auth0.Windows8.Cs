@@ -16,18 +16,17 @@ namespace Auth0.SDK
         private const string AuthorizeUrl = "https://{0}/authorize?client_id={1}&redirect_uri={2}&response_type=token&connection={3}&scope={4}";
         private const string LoginWidgetUrl = "https://{0}/login/?client={1}&redirect_uri={2}&response_type=token&scope={3}";
         private const string ResourceOwnerEndpoint = "https://{0}/oauth/ro";
+        private const string DelegationEndpoint = "https://{0}/delegation";
         private const string UserInfoEndpoint = "https://{0}/userinfo?access_token={1}";
         private const string DefaultCallback = "https://{0}/mobile";
 
-        private readonly string auth0Namespace;
+        private readonly string domain;
         private readonly string clientId;
-        private readonly string clientSecret;
 
-        public Auth0Client(string auth0Namespace, string clientId, string clientSecret)
+        public Auth0Client(string domain, string clientId)
         {
-            this.auth0Namespace = auth0Namespace;
+            this.domain = domain;
             this.clientId = clientId;
-            this.clientSecret = clientSecret;
         }
 
         public Auth0User CurrentUser { get; private set; }
@@ -36,7 +35,7 @@ namespace Auth0.SDK
         {
             get
             {
-                return string.Format(DefaultCallback, this.auth0Namespace);
+                return string.Format(DefaultCallback, this.domain);
             }
         }
 
@@ -75,11 +74,10 @@ namespace Auth0.SDK
         /// <returns>Returns a Task of Auth0User</returns>
         public Task<Auth0User> LoginAsync(string connection, string userName, string password, string scope = "openid")
         {
-            var endpoint = string.Format(ResourceOwnerEndpoint, this.auth0Namespace);
+            var endpoint = string.Format(ResourceOwnerEndpoint, this.domain);
             var parameters = new Dictionary<string, string> 
 			{
 				{ "client_id", this.clientId },
-				{ "client_secret", this.clientSecret },
 				{ "connection", connection },
 				{ "username", userName },
 				{ "password", password },
@@ -119,6 +117,64 @@ namespace Auth0.SDK
         }
 
         /// <summary>
+        /// Get a delegation token.
+        /// </summary>
+        /// <returns>Delegation token result.</returns>
+        /// <param name="targetClientId">Target client ID.</param>
+        /// <param name="options">Custom parameters.</param>
+        public Task<JObject> GetDelegationToken(string targetClientId, IDictionary<string, string> options = null)
+        {
+            var id_token = string.Empty;
+            options = options ?? new Dictionary<string, string>();
+
+            // ensure id_token
+            if (options.ContainsKey("id_token"))
+            {
+                id_token = options["id_token"];
+                options.Remove("id_token");
+            }
+            else
+            {
+                id_token = this.CurrentUser.IdToken;
+            }
+
+            if (string.IsNullOrEmpty(id_token))
+            {
+                throw new InvalidOperationException(
+                    "You need to login first or specify a value for id_token parameter.");
+            }
+
+            var endpoint = string.Format(DelegationEndpoint, this.domain);
+            var parameters = new Dictionary<string, string> 
+			{
+				{ "grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer" },
+				{ "id_token", id_token },
+				{ "target", targetClientId },
+				{ "client_id", this.clientId }
+			};
+
+            // custom parameters
+            foreach (var option in options)
+            {
+                parameters.Add(option.Key, option.Value);
+            }
+
+            var request = new HttpClient();
+            return request.PostAsync(new Uri(endpoint), new FormUrlEncodedContent(parameters)).ContinueWith(t =>
+            {
+                try
+                {
+                    var text = t.Result.Content.ReadAsStringAsync().Result;
+                    return JObject.Parse(text);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            });
+        }
+
+        /// <summary>
         /// Log a user out of a Auth0 application.
         /// </summary>
         public void Logout()
@@ -128,7 +184,7 @@ namespace Auth0.SDK
 
         private void SetupCurrentUser(IDictionary<string, string> accountProperties)
         {
-            var endpoint = string.Format(UserInfoEndpoint, this.auth0Namespace, accountProperties["access_token"]);
+            var endpoint = string.Format(UserInfoEndpoint, this.domain, accountProperties["access_token"]);
             var request = new HttpClient();
 
             request.GetAsync(new Uri(endpoint)).ContinueWith(t =>
@@ -166,8 +222,8 @@ namespace Auth0.SDK
 
             var redirectUri = this.CallbackUrl;
             var authorizeUri = !string.IsNullOrWhiteSpace(connection) ?
-                string.Format(AuthorizeUrl, this.auth0Namespace, this.clientId, Uri.EscapeDataString(redirectUri), connection, scope) :
-                string.Format(LoginWidgetUrl, this.auth0Namespace, this.clientId, Uri.EscapeDataString(redirectUri), scope);
+                string.Format(AuthorizeUrl, this.domain, this.clientId, Uri.EscapeDataString(redirectUri), connection, scope) :
+                string.Format(LoginWidgetUrl, this.domain, this.clientId, Uri.EscapeDataString(redirectUri), scope);
 
             var state = new string(chars);
             var startUri = new Uri(authorizeUri + "&state=" + state);
