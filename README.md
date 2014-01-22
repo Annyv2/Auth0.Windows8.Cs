@@ -10,8 +10,8 @@
 
   ~~~cs
   var auth0 = new Auth0Client(
-     "Your_Auth0_Namespace", // e.g.: "mytenant.auth0.com"
-	 "Your_Client_ID");
+     "YOUR_AUTH0_DOMAIN", // e.g.: "mytenant.auth0.com"
+	 "YOUR_CLIENT_ID");
   ~~~
 
 3. Trigger login (with Widget) 
