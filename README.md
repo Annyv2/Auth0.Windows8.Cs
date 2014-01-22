@@ -58,7 +58,7 @@ var targetClientId = "{TARGET_CLIENT_ID}";
 var options = new Dictionary<string, string>
 {
     { "scope", "openid profile" },		// default: openid
-    { "id_token", "USER_ID_TOKEN" }		// default: id_token of the authenticated user (client.auth0User.IdToken)
+    { "id_token", "USER_ID_TOKEN" }		// default: id_token of the authenticated user (auth0.CurrentUser.IdToken)
 };
 
 auth0.GetDelegationToken(targetClientId, options)
