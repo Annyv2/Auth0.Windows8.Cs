@@ -1,3 +1,7 @@
+using System.Linq;
+using Windows.Devices.Enumeration;
+using Windows.Networking.Connectivity;
+
 namespace Auth0.SDK
 {
     using Newtonsoft.Json.Linq;
@@ -15,27 +19,51 @@ namespace Auth0.SDK
     {
         private const string AuthorizeUrl = "https://{0}/authorize?client_id={1}&redirect_uri={2}&response_type=token&connection={3}&scope={4}";
         private const string LoginWidgetUrl = "https://{0}/login/?client={1}&redirect_uri={2}&response_type=token&scope={3}";
+        private const string DeviceQueryString = "&device={0}";
         private const string ResourceOwnerEndpoint = "https://{0}/oauth/ro";
         private const string DelegationEndpoint = "https://{0}/delegation";
         private const string UserInfoEndpoint = "https://{0}/userinfo?access_token={1}";
         private const string DefaultCallback = "https://{0}/mobile";
 
-        private readonly string domain;
-        private readonly string clientId;
+        private readonly string _domain;
+        private readonly string _clientId;
+        private readonly string _device;
 
         public Auth0Client(string domain, string clientId)
         {
-            this.domain = domain;
-            this.clientId = clientId;
+            _domain = domain;
+            _clientId = clientId;
+        }
+
+        public Auth0Client(string domain, string clientId, string device)
+            : this(domain, clientId)
+        {
+            _device = device;
         }
 
         public Auth0User CurrentUser { get; private set; }
+
+        public string DeviceName
+        {
+            get
+            {
+                if (!String.IsNullOrEmpty(_device))
+                    return _device;
+
+                var defaultDeviceName = "Windows Device";
+                var hostname = NetworkInformation.GetHostNames()
+                    .FirstOrDefault(name => name.DisplayName.Contains(".local"));
+                if (hostname != null)
+                    defaultDeviceName = hostname.DisplayName.Replace(".local", "");
+                return defaultDeviceName;
+            }
+        }
 
         public string CallbackUrl
         {
             get
             {
-                return string.Format(DefaultCallback, this.domain);
+                return string.Format(DefaultCallback, this._domain);
             }
         }
 
@@ -74,16 +102,19 @@ namespace Auth0.SDK
         /// <returns>Returns a Task of Auth0User</returns>
         public Task<Auth0User> LoginAsync(string connection, string userName, string password, string scope = "openid")
         {
-            var endpoint = string.Format(ResourceOwnerEndpoint, this.domain);
+            var endpoint = string.Format(ResourceOwnerEndpoint, this._domain);
             var parameters = new Dictionary<string, string> 
 			{
-				{ "client_id", this.clientId },
+				{ "client_id", this._clientId },
 				{ "connection", connection },
 				{ "username", userName },
 				{ "password", password },
 				{ "grant_type", "password" },
 				{ "scope", scope }
 			};
+
+            if (RequireDevice(scope))
+                parameters.Add("device", DeviceName);
 
             var request = new HttpClient();
             return request.PostAsync(new Uri(endpoint), new FormUrlEncodedContent(parameters)).ContinueWith(t =>
@@ -144,13 +175,13 @@ namespace Auth0.SDK
                     "You need to login first or specify a value for id_token parameter.");
             }
 
-            var endpoint = string.Format(DelegationEndpoint, this.domain);
+            var endpoint = string.Format(DelegationEndpoint, this._domain);
             var parameters = new Dictionary<string, string> 
 			{
 				{ "grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer" },
 				{ "id_token", id_token },
 				{ "target", targetClientId },
-				{ "client_id", this.clientId }
+				{ "client_id", this._clientId }
 			};
 
             // custom parameters
@@ -184,7 +215,7 @@ namespace Auth0.SDK
 
         private void SetupCurrentUser(IDictionary<string, string> accountProperties)
         {
-            var endpoint = string.Format(UserInfoEndpoint, this.domain, accountProperties["access_token"]);
+            var endpoint = string.Format(UserInfoEndpoint, this._domain, accountProperties["access_token"]);
             var request = new HttpClient();
 
             request.GetAsync(new Uri(endpoint)).ContinueWith(t =>
@@ -222,14 +253,22 @@ namespace Auth0.SDK
 
             var redirectUri = this.CallbackUrl;
             var authorizeUri = !string.IsNullOrWhiteSpace(connection) ?
-                string.Format(AuthorizeUrl, this.domain, this.clientId, Uri.EscapeDataString(redirectUri), connection, scope) :
-                string.Format(LoginWidgetUrl, this.domain, this.clientId, Uri.EscapeDataString(redirectUri), scope);
+                string.Format(AuthorizeUrl, this._domain, this._clientId, Uri.EscapeDataString(redirectUri), connection, scope) :
+                string.Format(LoginWidgetUrl, this._domain, this._clientId, Uri.EscapeDataString(redirectUri), scope);
+
+            if (RequireDevice(scope))
+                authorizeUri += String.Format(DeviceQueryString, Uri.EscapeDataString(DeviceName));
 
             var state = new string(chars);
             var startUri = new Uri(authorizeUri + "&state=" + state);
             var endUri = new Uri(redirectUri);
 
             return await WebAuthenticationBroker.AuthenticateAsync(WebAuthenticationOptions.None, startUri, endUri).AsTask<WebAuthenticationResult>();
+        }
+
+        private static bool RequireDevice(string scope)
+        {
+            return !String.IsNullOrEmpty(scope) && scope.Contains("offline_access");
         }
 
         private static Dictionary<string, string> parseResult(string result)
