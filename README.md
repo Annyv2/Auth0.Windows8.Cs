@@ -40,7 +40,7 @@ Or with specific user name and password (only for providers that support this):
 var user = await auth0.LoginAsync("my-db-connection", "username", "password");
 ~~~
 
-	> Note: if the user pressed the back button `LoginAsync` throws a `AuthenticationCancelException`. If consent was not given (on social providers) or some other error happened it will throw a `AuthenticationErrorException`.
+> Note: if the user pressed the back button `LoginAsync` throws a `AuthenticationCancelException`. If consent was not given (on social providers) or some other error happened it will throw a `AuthenticationErrorException`.
 
 ### Scope
 
