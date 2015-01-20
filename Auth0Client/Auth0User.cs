@@ -13,12 +13,15 @@ namespace Auth0.SDK
         {
             this.Auth0AccessToken = accountProperties.ContainsKey("access_token") ? accountProperties["access_token"] : string.Empty;
             this.IdToken = accountProperties.ContainsKey("id_token") ? accountProperties["id_token"] : string.Empty;
+            this.RefreshToken = accountProperties.ContainsKey("refresh_token") ? accountProperties["refresh_token"] : string.Empty;
             this.Profile = accountProperties.ContainsKey("profile") ? accountProperties["profile"].ToJson() : null;
         }
 
         public string Auth0AccessToken { get; set; }
 
         public string IdToken { get; set; }
+
+        public string RefreshToken { get; set; }
 
         public JObject Profile { get; set; }
     }
