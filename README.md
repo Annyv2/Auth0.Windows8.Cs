@@ -10,8 +10,8 @@
 
   ~~~cs
   var auth0 = new Auth0Client(
-     "Your_Auth0_Namespace", // e.g.: "mytenant.auth0.com"
-	 "Your_Client_ID");
+     "YOUR_AUTH0_DOMAIN", // e.g.: "mytenant.auth0.com"
+	 "YOUR_CLIENT_ID");
   ~~~
 
 3. Trigger login (with Widget) 
@@ -49,6 +49,25 @@ Optionally you can specify the `scope` parameter. There are two possible values 
 * __scope: "openid"__ _(default)_ - It will return, not only the `access_token`, but also an `id_token` which is a Json Web Token (JWT). The JWT will only contain the user id.
 * __scope: "openid profile"__ - If you want the entire user profile to be part of the `id_token`.
 
+### Delegation Token Request
+
+You can obtain a delegation token specifying the ID of the target client (`targetClientId`) and, optionally, an `IDictionary<string, string>` object (`options`) in order to include custom parameters like scope or id_token:
+
+~~~cs
+var targetClientId = "{TARGET_CLIENT_ID}";
+var options = new Dictionary<string, string>
+{
+    { "scope", "openid profile" },		// default: openid
+    { "id_token", "USER_ID_TOKEN" }		// default: id_token of the authenticated user (auth0.CurrentUser.IdToken)
+};
+
+auth0.GetDelegationToken(targetClientId, options)
+     .ContinueWith(t =>
+        {
+            // Call your API using t.Result["id_token"]
+        });
+~~~
+
 ---
 
 ## What is Auth0?
@@ -66,3 +85,7 @@ Auth0 helps you to:
 
 1. Go to [Auth0](http://developers.auth0.com) and click Sign Up.
 2. Use Google, GitHub or Microsoft Account to login.
+
+## Issue Reporting
+
+If you have found a bug or if you have a feature request, please report them at this repository issues section. Please do not report security vulnerabilities on the public GitHub issue tracker. The [Responsible Disclosure Program](https://auth0.com/whitehat) details the procedure for disclosing security issues.
