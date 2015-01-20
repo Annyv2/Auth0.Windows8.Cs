@@ -17,8 +17,12 @@ namespace Auth0.SDK
     /// </summary>
     public partial class Auth0Client
     {
-        private const string AuthorizeUrl = "https://{0}/authorize?client_id={1}&redirect_uri={2}&response_type=token&connection={3}&scope={4}";
-        private const string LoginWidgetUrl = "https://{0}/login/?client={1}&redirect_uri={2}&response_type=token&scope={3}";
+        private const string AuthorizeUrl =
+            "https://{0}/authorize?client_id={1}&redirect_uri={2}&response_type=token&connection={3}&scope={4}";
+
+        private const string LoginWidgetUrl =
+            "https://{0}/login/?client={1}&redirect_uri={2}&response_type=token&scope={3}";
+
         private const string DeviceQueryString = "&device={0}";
         private const string ResourceOwnerEndpoint = "https://{0}/oauth/ro";
         private const string DelegationEndpoint = "https://{0}/delegation";
@@ -61,10 +65,7 @@ namespace Auth0.SDK
 
         public string CallbackUrl
         {
-            get
-            {
-                return string.Format(DefaultCallback, this._domain);
-            }
+            get { return string.Format(DefaultCallback, this._domain); }
         }
 
         /// <summary>
@@ -78,12 +79,20 @@ namespace Auth0.SDK
         public async Task<Auth0User> LoginAsync(string connection = "", string scope = "openid")
         {
             var tcs = new TaskCompletionSource<Auth0User>();
-            var auth = await this.GetAuthenticatorAsync(connection, scope);
 
+            var auth = await GetAuthenticatorAsync(connection, scope);
             if (auth.ResponseStatus == WebAuthenticationStatus.Success)
             {
-                this.SetupCurrentUser(parseResult(auth.ResponseData));
-                tcs.TrySetResult(this.CurrentUser);
+                var tokens = ParseResult(auth.ResponseData);
+                if (tokens != null)
+                {
+                    this.SetupCurrentUser(tokens);
+                    tcs.TrySetResult(this.CurrentUser);
+                }
+                else
+                {
+                    CurrentUser = null;
+                }
             }
 
             return this.CurrentUser;
@@ -103,15 +112,15 @@ namespace Auth0.SDK
         public Task<Auth0User> LoginAsync(string connection, string userName, string password, string scope = "openid")
         {
             var endpoint = string.Format(ResourceOwnerEndpoint, this._domain);
-            var parameters = new Dictionary<string, string> 
-			{
-				{ "client_id", this._clientId },
-				{ "connection", connection },
-				{ "username", userName },
-				{ "password", password },
-				{ "grant_type", "password" },
-				{ "scope", scope }
-			};
+            var parameters = new Dictionary<string, string>
+            {
+                {"client_id", this._clientId},
+                {"connection", connection},
+                {"username", userName},
+                {"password", password},
+                {"grant_type", "password"},
+                {"scope", scope}
+            };
 
             if (RequireDevice(scope))
                 parameters.Add("device", DeviceName);
@@ -135,7 +144,8 @@ namespace Auth0.SDK
                     }
                     else
                     {
-                        throw new UnauthorizedAccessException("Expected access_token in access token response, but did not receive one.");
+                        throw new UnauthorizedAccessException(
+                            "Expected access_token in access token response, but did not receive one.");
                     }
                 }
                 catch (Exception ex)
@@ -176,13 +186,13 @@ namespace Auth0.SDK
             }
 
             var endpoint = string.Format(DelegationEndpoint, this._domain);
-            var parameters = new Dictionary<string, string> 
-			{
-				{ "grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer" },
-				{ "id_token", id_token },
-				{ "target", targetClientId },
-				{ "client_id", this._clientId }
-			};
+            var parameters = new Dictionary<string, string>
+            {
+                {"grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"},
+                {"id_token", id_token},
+                {"target", targetClientId},
+                {"client_id", this._clientId}
+            };
 
             // custom parameters
             foreach (var option in options)
@@ -235,7 +245,7 @@ namespace Auth0.SDK
                     this.CurrentUser = new Auth0User(accountProperties);
                 }
             })
-            .Wait();
+                .Wait();
         }
 
         private async Task<WebAuthenticationResult> GetAuthenticatorAsync(string connection, string scope)
@@ -252,9 +262,11 @@ namespace Auth0.SDK
             scope = WebUtility.UrlEncode(scope);
 
             var redirectUri = this.CallbackUrl;
-            var authorizeUri = !string.IsNullOrWhiteSpace(connection) ?
-                string.Format(AuthorizeUrl, this._domain, this._clientId, Uri.EscapeDataString(redirectUri), connection, scope) :
-                string.Format(LoginWidgetUrl, this._domain, this._clientId, Uri.EscapeDataString(redirectUri), scope);
+            var authorizeUri = !string.IsNullOrWhiteSpace(connection)
+                ? string.Format(AuthorizeUrl, this._domain, this._clientId, Uri.EscapeDataString(redirectUri),
+                    connection,
+                    scope)
+                : string.Format(LoginWidgetUrl, this._domain, this._clientId, Uri.EscapeDataString(redirectUri), scope);
 
             if (RequireDevice(scope))
                 authorizeUri += String.Format(DeviceQueryString, Uri.EscapeDataString(DeviceName));
@@ -263,7 +275,10 @@ namespace Auth0.SDK
             var startUri = new Uri(authorizeUri + "&state=" + state);
             var endUri = new Uri(redirectUri);
 
-            return await WebAuthenticationBroker.AuthenticateAsync(WebAuthenticationOptions.None, startUri, endUri).AsTask<WebAuthenticationResult>();
+            return
+                await
+                    WebAuthenticationBroker.AuthenticateAsync(WebAuthenticationOptions.None, startUri, endUri)
+                        .AsTask<WebAuthenticationResult>();
         }
 
         private static bool RequireDevice(string scope)
@@ -271,17 +286,22 @@ namespace Auth0.SDK
             return !String.IsNullOrEmpty(scope) && scope.Contains("offline_access");
         }
 
-        private static Dictionary<string, string> parseResult(string result)
+        /// <summary>
+        /// After authenticating the result will be: https://callback#id_token=1234&access_token=12345&...
+        /// </summary>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        private static Dictionary<string, string> ParseResult(string result)
         {
+            if (String.IsNullOrEmpty(result) || !result.Contains("#"))
+                return null;
+
             var tokens = new Dictionary<string, string>();
 
-            // Result will be: https://callback#id_token=1234&access_token=12345&...
-            var strTokens = result.Split('#')[1].Split('&');
-
-            foreach (var t in strTokens)
+            foreach (var tokenPart in result.Split('#')[1].Split('&'))
             {
-                var tok = t.Split('=');
-                tokens.Add(tok[0], tok[1]);
+                var tokenKeyValue = tokenPart.Split('=');
+                tokens.Add(tokenKeyValue[0], tokenKeyValue[1]);
             }
 
             return tokens;
