@@ -50,24 +50,6 @@ Optionally you can specify the `scope` parameter. There are two possible values 
 * __scope: "openid profile"__ - If you want the entire user profile to be part of the `id_token`.
 * __scope: "openid {attr1} {attr2} {attrN}"__ - You can also define specific attributes with this syntax. For example: `scope: "openid name email picture"`.
 
-### Delegation Token Request
-
-You can obtain a delegation token specifying the ID of the target client (`targetClientId`) and, optionally, an `IDictionary<string, string>` object (`options`) in order to include custom parameters like scope or id_token:
-
-~~~cs
-var options = new Dictionary<string, string>
-{
-    { "scope", "openid profile" },		// default: openid
-};
-
-var result = await auth0.GetDelegationToken(
-  targetClientId: "{TARGET_CLIENT_ID}", // defaults to: ""
-  idToken: "{USER_ID_TOKEN}", // defaults to: id_token of the authenticated user (auth0 CurrentUser.IdToken)
-  options: options);
-
-// id_token available throug result["id_token"]
-~~~
-
 ### Renew id_token if not expired
 
 If the id_token of the logged in user has not expired (["exp" claim](http://self-issued.info/docs/draft-ietf-oauth-json-web-token.html#expDef)) you can renew it by calling:
@@ -112,6 +94,24 @@ var result = await auth0.RefreshToken(refreshToken);
 // access to result["id_token"];
 ~~~
 
+### Delegation Token Request
+
+You can obtain a delegation token specifying the ID of the target client (`targetClientId`) and, optionally, an `IDictionary<string, string>` object (`options`) in order to include custom parameters like scope or id_token:
+
+~~~cs
+var options = new Dictionary<string, string>
+{
+    { "scope", "openid profile" },		// default: openid
+};
+
+var result = await auth0.GetDelegationToken(
+  targetClientId: "{TARGET_CLIENT_ID}",
+  idToken: "{USER_ID_TOKEN}", // defaults to: id_token of the authenticated user (auth0 CurrentUser.IdToken)
+  options: options);
+
+// id_token available throug result["id_token"]
+~~~
+
 ---
 
 ## What is Auth0?
@@ -124,11 +124,6 @@ Auth0 helps you to:
 * Support for generating signed [Json Web Tokens](https://docs.auth0.com/jwt) to call your APIs and **flow the user identity** securely.
 * Analytics of how, when and where users are logging in.
 * Pull data from other sources and add it to the user profile, through [JavaScript rules](https://docs.auth0.com/rules).
-
-## Create a free account in Auth0
-
-1. Go to [Auth0](http://developers.auth0.com) and click Sign Up.
-2. Use Google, GitHub or Microsoft Account to login.
 
 ## Issue Reporting
 
