@@ -103,6 +103,8 @@
   <ItemGroup>
     <Compile Include="Auth0Client.cs" />
     <Compile Include="Auth0User.cs" />
+    <Compile Include="AuthenticationCancelException.cs" />
+    <Compile Include="AuthenticationErrorException.cs" />
     <Compile Include="Device.cs" />
     <Compile Include="IDeviceIdProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

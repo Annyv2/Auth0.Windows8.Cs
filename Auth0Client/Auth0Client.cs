@@ -71,8 +71,12 @@ namespace Auth0.SDK
                 }
                 else
                 {
-                    this.CurrentUser = null;
+                    throw new AuthenticationErrorException();
                 }
+            }
+            else if (auth.ResponseStatus == WebAuthenticationStatus.UserCancel)
+            {
+                throw new AuthenticationCancelException();
             }
 
             return this.CurrentUser;
@@ -338,10 +342,7 @@ namespace Auth0.SDK
             var startUri = new Uri(authorizeUri + "&state=" + state);
             var endUri = new Uri(redirectUri);
 
-            return
-                await
-                    WebAuthenticationBroker.AuthenticateAsync(WebAuthenticationOptions.None, startUri, endUri)
-                        .AsTask<WebAuthenticationResult>();
+            return await WebAuthenticationBroker.AuthenticateAsync(WebAuthenticationOptions.None, startUri, endUri);
         }
 
         private static bool RequireDevice(string scope)
