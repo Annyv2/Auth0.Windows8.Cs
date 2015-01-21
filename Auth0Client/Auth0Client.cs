@@ -256,7 +256,6 @@ namespace Auth0.SDK
             options["id_token"] = idToken;
             options["api_type"] = api;
             options["refresh_token"] = refreshToken;
-            options["target"] = targetClientId;
 
             var endpoint = string.Format(DelegationEndpoint, this.domain);
             var parameters = new Dictionary<string, string>
@@ -269,7 +268,8 @@ namespace Auth0.SDK
             // custom parameters
             foreach (var option in options)
             {
-                parameters.Add(option.Key, option.Value);
+                if (!parameters.ContainsKey(option.Key))
+                    parameters.Add(option.Key, option.Value);
             }
 
             var request = new HttpClient();
