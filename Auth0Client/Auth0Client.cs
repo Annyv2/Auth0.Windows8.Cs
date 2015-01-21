@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Auth0.SDK
 {
     using Newtonsoft.Json.Linq;
@@ -19,6 +21,7 @@ namespace Auth0.SDK
         private const string LoginWidgetUrl =
             "https://{0}/login/?client={1}&redirect_uri={2}&response_type=token&scope={3}";
 
+        private const string ParamQueryString = "&{0}={1}";
         private const string ResourceOwnerEndpoint = "https://{0}/oauth/ro";
         private const string DelegationEndpoint = "https://{0}/delegation";
         private const string UserInfoEndpoint = "https://{0}/userinfo?access_token={1}";
@@ -26,6 +29,20 @@ namespace Auth0.SDK
 
         private readonly string domain;
         private readonly string clientId;
+        
+        private static readonly string[] ReservedAuthParams =
+        {
+            "state",
+            "access_token",
+            "scope",
+            "protocol",
+            "device",
+            "request_id",
+            "connection_scopes",
+            "nonce",
+            "offline_mode"
+        };
+
 
         public Auth0Client(string domain, string clientId)
         {
@@ -53,14 +70,15 @@ namespace Auth0.SDK
         /// <param name="withRefreshToken">true to include the refresh_token in the response, false (default) otherwise.
         /// The refresh_token allows you to renew the id_token indefinitely (does not expire) unless specifically revoked.</param>
         /// <param name="scope">Optional scope, either 'openid' or 'openid profile'</param>
+        /// <param name="authParams">Additional parameters to forward to Auth0 or to the IdP (like login_hint).</param>
         /// <returns>Returns a Task of Auth0User</returns>
-        public async Task<Auth0User> LoginAsync(string connection = "", bool withRefreshToken = false, string scope = "openid")
+        public async Task<Auth0User> LoginAsync(string connection = "", bool withRefreshToken = false, string scope = "openid", IDictionary<string, string> authParams = null)
         {
             scope = IncreaseScopeWithOfflineAccess(withRefreshToken, scope);
 
             var tcs = new TaskCompletionSource<Auth0User>();
 
-            var auth = await this.GetAuthenticatorAsync(connection, scope);
+            var auth = await this.GetAuthenticatorAsync(connection, scope, authParams);
             if (auth.ResponseStatus == WebAuthenticationStatus.Success)
             {
                 var tokens = ParseResult(auth.ResponseData);
@@ -312,7 +330,7 @@ namespace Auth0.SDK
                 .Wait();
         }
 
-        private async Task<WebAuthenticationResult> GetAuthenticatorAsync(string connection, string scope)
+        private async Task<WebAuthenticationResult> GetAuthenticatorAsync(string connection, string scope, IDictionary<string, string> authParams)
         {
             // Generate state to include in startUri
             var chars = new char[16];
@@ -336,6 +354,13 @@ namespace Auth0.SDK
             {
                 var deviceId = Uri.EscapeDataString(await this.DeviceIdProvider.GetDeviceId());
                 authorizeUri += string.Format("&device={0}", deviceId);
+            }
+
+            // Add custom auth params to the request.
+            if (authParams != null)
+            {
+                foreach (var authParam in authParams.Where(a => !ReservedAuthParams.Contains(a.Key)))
+                    authorizeUri += String.Format(ParamQueryString, authParam.Key, authParam.Value);
             }
 
             var state = new string(chars);
