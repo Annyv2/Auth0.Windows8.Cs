@@ -57,7 +57,7 @@ If the id_token of the logged in user has not expired (["exp" claim](http://self
 ~~~cs
 var options = new Dictionary<string, string>
 {
-    { "scope", "openid profile" }, // default: passthrough i.e. same as previous time token was asked for
+    { "scope", "openid name email picture" }, // default: passthrough i.e. same as previous time token was asked for
 };
 
 auth0.RenewIdToken(options: options);
