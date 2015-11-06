@@ -47,7 +47,7 @@ var user = await auth0.LoginAsync("my-db-connection", "username", "password");
 Optionally you can specify the `scope` parameter. There are two possible values for scope today:
 
 * __scope: "openid"__ _(default)_ - It will return, not only the `access_token`, but also an `id_token` which is a Json Web Token (JWT). The JWT will only contain the user id.
-* __scope: "openid profile"__ - If you want the entire user profile to be part of the `id_token`.
+* __scope: "openid profile"__ - If you want the entire user profile to be part of the `id_token` (not recommended). This can cause problems when sending or receiving tokens in URLs (e.g. when using response_type=token) and will likely create an unnecessarily large token. Keep in mind that JWTs are sent on every API request, so it is desirable to keep them as small as possible.
 * __scope: "openid {attr1} {attr2} {attrN}"__ - You can also define specific attributes with this syntax. For example: `scope: "openid name email picture"`.
 
 ### Renew id_token if not expired
