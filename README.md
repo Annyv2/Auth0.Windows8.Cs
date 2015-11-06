@@ -101,7 +101,7 @@ You can obtain a delegation token specifying the ID of the target client (`targe
 ~~~cs
 var options = new Dictionary<string, string>
 {
-    { "scope", "openid profile" },		// default: openid
+    { "scope", "openid name email picture" },		// default: openid
 };
 
 var result = await auth0.GetDelegationToken(
